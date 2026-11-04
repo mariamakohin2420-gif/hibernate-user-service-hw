@@ -14,15 +14,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public User login(String email, String password) throws AuthenticationException {
-        User user = userService.findByEmail(email)
-                .orElseThrow(() ->
-                        new AuthenticationException("Can't find user by email: " + email));
+        User user = userService.findByEmail(email).orElse(null);
 
-        String hashedPassword = HashUtil.hashPassword(password, user.getSalt());
-        if (user.getPassword().equals(hashedPassword)) {
-            return user;
+        // Перевіряємо в одній умові: чи є користувач І чи збігається хеш пароля
+        if (user == null || !user.getPassword().equals(
+                HashUtil.hashPassword(password, user.getSalt()))) {
+            throw new AuthenticationException("Wrong email or password");
         }
-        throw new AuthenticationException("Wrong email or password");
+
+        return user;
     }
 
     @Override
@@ -31,9 +31,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new RegistrationException("User with email " + email + " already exist.");
         }
 
-        byte[] salt = HashUtil.getSalt();
-        String hashedPassword = HashUtil.hashPassword(password, salt);
-        User user = new User(email, hashedPassword, salt);
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(password);
         return userService.add(user);
     }
 }
